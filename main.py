@@ -1,85 +1,14 @@
 import uvicorn
-from fastapi import FastAPI, Query, Body
+from fastapi import FastAPI
 from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html
 )
 
+from hotels import router as router_hotels
+
 app = FastAPI(docs_url=None, redoc_url=None)
-
-hotels = [
-    {"id": 1, "title": "Sochi", "name": "sochi"},
-    {"id": 2, "title": "Paris", "name": "paris"},
-]
-
-
-@app.get("/hotels")
-def get_hotels(
-    id: int | None = Query(default=None, description="ID of the hotel"),
-    title: str | None = Query(default=None, description="Title of the hotel"),
-):
-    hotels_ = []
-    for hotel in hotels:
-        if id is not None and hotel["id"] != id:
-            continue
-        if title is not None and hotel["title"] != title:
-            continue
-        hotels_.append(hotel)
-    return hotels_
-
-
-@app.delete("/hotels/{hotel_id}")
-def delete_hotel(hotel_id: int):
-    for i, hotel in enumerate(hotels):
-        if hotel["id"] == hotel_id:
-            del hotels[i]
-            return {"status": "OK"}
-
-
-@app.post("/hotels")
-def create_hotel(
-    title: str = Body(embed=True),
-    name: str = Body(embed=True)
-):
-    global hotels
-    hotels.append({
-        "id": hotels[-1]["id"] + 1,
-        "title": title,
-        "name": name
-    })
-    return {"status": "OK"}
-
-
-@app.put("/hotels/{hotel_id}")
-def update_hotel(
-    hotel_id: int,
-    title: str = Body(embed=True),
-    name: str = Body(embed=True)
-):
-    global hotels
-    for hotel in hotels:
-        if hotel["id"] == hotel_id:
-            hotel["title"] = title
-            hotel["name"] = name
-            break
-    return {"status": "OK"}
-
-
-@app.patch("/hotels/{hotel_id}")
-def part_update_hotel(
-    hotel_id: int,
-    title: str = Body(embed=True, default=None),
-    name: str = Body(embed=True, default=None)
-):
-    global hotels
-    for hotel in hotels:
-        if hotel["id"] == hotel_id:
-            if title is not None:
-                hotel["title"] = title
-            if name is not None:
-                hotel["name"] = name
-            break
-    return {"status": "OK"}
+app.include_router(router_hotels)
 
 
 @app.get("/docs", include_in_schema=False)
