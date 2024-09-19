@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Body, Query
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 
 from src.api.dependecies import PaginationDep
 from src.database import async_session_maker, engine
@@ -20,9 +20,9 @@ async def get_hotels(
     async with async_session_maker() as session:
         query = select(HotelsOrm)
         if title is not None:
-            query = query.filter(HotelsOrm.title.contains(title))
+            query = query.filter(func.lower(HotelsOrm.title).like(f"%{title.strip().lower()}%"))
         if location is not None:
-            query = query.filter(HotelsOrm.location.contains(location))
+            query = query.filter(func.lower(HotelsOrm.location).like(f"%{location.strip().lower()}%"))
         query = (
             query
             .limit(per_page)
