@@ -1,39 +1,37 @@
 from fastapi import APIRouter, Body, Query
+from sqlalchemy import insert, select
 
 from src.api.dependecies import PaginationDep
+from src.database import async_session_maker, engine
+from src.models.hotels import HotelsOrm
 from src.schemas.hotels import Hotel, HotelPATCH
 
-hotels = [
-    {"id": 1, "title": "Sochi", "name": "sochi"},
-    {"id": 2, "title": "Дубай", "name": "dubai"},
-    {"id": 3, "title": "Мальдивы", "name": "maldivi"},
-    {"id": 4, "title": "Геленджик", "name": "gelendzhik"},
-    {"id": 5, "title": "Москва", "name": "moscow"},
-    {"id": 6, "title": "Казань", "name": "kazan"},
-    {"id": 7, "title": "Санкт-Петербург", "name": "spd"},
-]
 
 router = APIRouter(prefix="/hotels", tags=["Отели"])
 
 
 @router.get("")
-def get_hotels(
+async def get_hotels(
     pagination: PaginationDep,
     id: int | None = Query(default=None, description="ID отеля"),
     title: str | None = Query(default=None, description="Название отеля"),
 ):
-    hotels_ = []
-    for hotel in hotels:
-        if id is not None and hotel["id"] != id:
-            continue
-        if title is not None and hotel["title"] != title:
-            continue
-        hotels_.append(hotel)
-    if pagination.page is not None and pagination.per_page is not None:
-        start = (pagination.page - 1) * pagination.per_page
-        end = start + pagination.per_page
-        return hotels_[start: end]
-    return hotels_
+    per_page = pagination.per_page or 5
+    async with async_session_maker() as session:
+        query = select(HotelsOrm)
+        if id is not None:
+            query = query.filter_by(id=id)
+        if title is not None:
+            query = query.filter_by(title=title)
+        query = (
+            query
+            .limit(per_page)
+            .offset((pagination.page - 1) * per_page)
+        )
+        result = await session.execute(query)
+        hotels = result.scalars().all()
+
+    return hotels
 
 
 @router.delete(
@@ -41,33 +39,31 @@ def get_hotels(
     summary="Удалить отель",
     )
 def delete_hotel(hotel_id: int):
-    for i, hotel in enumerate(hotels):
-        if hotel["id"] == hotel_id:
-            del hotels[i]
-            break
     return {"status": "OK"}
 
 
 @router.post("")
-def create_hotel(
+async def create_hotel(
     hotel_data: Hotel = Body(openapi_examples={
         "1": {
             "summary": "Бейрут", "value": {
-                "title": "Бейрут отель", "name": "beirut"
+                "title": "Отель Бейрут", "location": "Бейрут, ул. Абу-Даби, 1"
                 }},
         "2": {
             "summary": "Братислава", "value": {
-                "title": "Братислава отель", "name": "bratislava"
+                "title": "Шикарный отель",
+                "location": "Братислава, ул. Пушкина, 12"
                 }
         }
     }),
 ) -> dict[str, str]:
-    global hotels
-    hotels.append({
-        "id": hotels[-1]["id"] + 1,
-        "title": hotel_data.title,
-        "name": hotel_data.name
-    })
+    async with async_session_maker() as session:
+        add_hotel_stmt = insert(HotelsOrm).values(**hotel_data.model_dump())
+        print(add_hotel_stmt.compile(
+            engine, compile_kwargs={"literal_binds": True})
+        )
+        await session.execute(add_hotel_stmt)
+        await session.commit()
     return {"status": "OK"}
 
 
@@ -76,12 +72,6 @@ def update_hotel(
     hotel_id: int,
     hotel_data: Hotel
 ):
-    global hotels
-    for hotel in hotels:
-        if hotel["id"] == hotel_id:
-            hotel["title"] = hotel_data.title
-            hotel["name"] = hotel_data.name
-            break
     return {"status": "OK"}
 
 
@@ -90,12 +80,4 @@ def partial_update_hotel(
     hotel_id: int,
     hotel_data: HotelPATCH
 ):
-    global hotels
-    for hotel in hotels:
-        if hotel["id"] == hotel_id:
-            if hotel_data.title is not None:
-                hotel["title"] = hotel_data.title
-            if hotel_data.name is not None:
-                hotel["name"] = hotel_data.name
-            break
     return {"status": "OK"}

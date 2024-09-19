@@ -5,8 +5,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from src.database import Base
 from src.config import settings
+from src.database import Base
 from src.models.hotels import HotelsOrm  # noqa
 from src.models.rooms import RoomsOrm  # noqa
 
@@ -15,8 +15,7 @@ from src.models.rooms import RoomsOrm  # noqa
 config = context.config
 
 config.set_main_option(
-    "sqlalchemy.url", f"{settings.DB_URL}?async_fallback=True"
-)
+    "sqlalchemy.url", f"{settings.DB_URL}?async_fallback=True")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -35,7 +34,7 @@ target_metadata = Base.metadata
 # ... etc.
 
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -59,7 +58,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-def run_migrations_online():
+def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine
@@ -67,7 +66,7 @@ def run_migrations_online():
 
     """
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
