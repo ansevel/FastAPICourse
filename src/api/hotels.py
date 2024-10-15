@@ -25,6 +25,12 @@ async def get_hotels(
         )
 
 
+@router.get("/{hotel_id}")
+async def get_hotel(hotel_id: int):
+    async with async_session_maker() as session:
+        return await HotelsRepository(session).get_one_or_none(id=hotel_id)
+
+
 @router.delete(
     path="/{hotel_id}",
     summary="Удалить отель",
@@ -69,8 +75,12 @@ async def update_hotel(
 
 
 @router.patch("/{hotel_id}")
-def partial_update_hotel(
+async def partially_update_hotel(
     hotel_id: int,
     hotel_data: HotelPATCH
 ):
+    async with async_session_maker() as session:
+        await HotelsRepository(session).edit(
+            hotel_data, exclude_unset=True, id=hotel_id)
+        await session.commit()
     return {"status": "OK"}
