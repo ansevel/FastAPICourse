@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, Query
 
 from src.api.dependecies import PaginationDep
 from src.database import async_session_maker
-from repositories.hotels import HotelsRepository
+from src.repositories.hotels import HotelsRepository
 from src.schemas.hotels import Hotel, HotelPATCH
 
 
@@ -29,7 +29,10 @@ async def get_hotels(
     path="/{hotel_id}",
     summary="Удалить отель",
     )
-def delete_hotel(hotel_id: int):
+async def delete_hotel(hotel_id: int):
+    async with async_session_maker() as session:
+        await HotelsRepository(session).delete(id=hotel_id)
+        await session.commit()
     return {"status": "OK"}
 
 
@@ -55,10 +58,13 @@ async def create_hotel(
 
 
 @router.put("/{hotel_id}")
-def update_hotel(
+async def update_hotel(
     hotel_id: int,
     hotel_data: Hotel
 ):
+    async with async_session_maker() as session:
+        await HotelsRepository(session).edit(hotel_data, id=hotel_id)
+        await session.commit()
     return {"status": "OK"}
 
 
