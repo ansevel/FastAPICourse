@@ -35,4 +35,5 @@ class HotelsRepository(BaseRepository):
             engine, compile_kwargs={"literal_binds": True})
         )
         result = await self.session.execute(query)
-        return result.scalars().all()
+        return [self.schema.model_validate(
+            row, from_attributes=True) for row in result.scalars().all()]
