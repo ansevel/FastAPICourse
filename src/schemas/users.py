@@ -17,3 +17,7 @@ class User(BaseModel):
     id: int
     username: str | None = Field(None)
     email: EmailStr
+
+
+class UserWithHashedPassword(User):
+    hashed_password: str
